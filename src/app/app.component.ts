@@ -9,6 +9,7 @@ import { ProjectsComponent } from './sections/projects.component';
 import { SkillsComponent } from './sections/skills.component';
 import { TerminalComponent } from './sections/terminal.component';
 import { ScrollSpyService } from './services/scroll-spy.service';
+import { ResumeViewerComponent } from './shared/resume-viewer.component';
 import { ThemeService } from './services/theme.service';
 
 @Component({
@@ -22,6 +23,7 @@ import { ThemeService } from './services/theme.service';
     ApiPlaygroundComponent,
     ContactComponent,
     TerminalComponent,
+    ResumeViewerComponent,
   ],
   template: `
     <a class="skip" href="#hero">Skip to content</a>
@@ -48,7 +50,7 @@ import { ThemeService } from './services/theme.service';
             <span class="badge" [class]="'badge b-' + s.kind">{{ s.badge }}</span>{{ s.file }}
           </a>
         }
-        <a [href]="p.resume" download><span class="badge b-pdf">PDF</span>{{ p.resume }}</a>
+        <a [href]="p.resume" [class.active]="pdfOpen()" (click)="openPdf($event)"><span class="badge b-pdf">PDF</span>{{ p.resume }}</a>
         <div class="label outline">OUTLINE</div>
         <pre class="tree">class Harinath
   ├ Experience
@@ -81,6 +83,10 @@ import { ThemeService } from './services/theme.service';
         </footer>
       </div>
     </div>
+
+    @if (pdfOpen()) {
+      <app-resume-viewer [file]="p.resume" (closed)="pdfOpen.set(false)" />
+    }
   `,
   styles: `
     :host { display: block; min-height: 100vh; }
@@ -231,9 +237,16 @@ export class AppComponent implements AfterViewInit {
   readonly p = PROFILE;
   readonly year = new Date().getFullYear();
   readonly menuOpen = signal(false);
+  readonly pdfOpen = signal(false);
 
   ngAfterViewInit(): void {
     this.spy.observe(this.sections.map((s) => s.id));
+  }
+
+  openPdf(event: Event): void {
+    event.preventDefault();
+    this.menuOpen.set(false);
+    this.pdfOpen.set(true);
   }
 
   go(event: Event, id: string): void {

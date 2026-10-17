@@ -4,6 +4,8 @@ import { PROFILE } from '../data/resume';
 
 type SendState = 'idle' | 'sending' | 'sent' | 'error';
 
+const NETLIFY_FORM_URL = 'https://harinath-g-portfolio.netlify.app/';
+
 @Component({
   selector: 'app-contact',
   template: `
@@ -91,12 +93,19 @@ export class ContactComponent {
     const body = new URLSearchParams(new FormData(form) as unknown as Record<string, string>).toString();
     this.state.set('sending');
 
+    // Netlify Forms only exists on Netlify, so other hosts post to the Netlify site.
+    // That cross-origin call is no-cors: the response is opaque, so a delivered request counts as sent.
+    const remote = !location.hostname.endsWith('netlify.app') && location.hostname !== 'localhost';
+    const init: RequestInit = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      ...(remote && { mode: 'no-cors' as const }),
+    };
+
     of(body)
       .pipe(
-        switchMap((b) =>
-          from(fetch('/', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: b })),
-        ),
-        map((res) => (res.ok ? 'sent' : 'error') as SendState),
+        switchMap((b) => from(fetch(remote ? NETLIFY_FORM_URL : '/', { ...init, body: b }))),
+        map((res) => (res.ok || res.type === 'opaque' ? 'sent' : 'error') as SendState),
         catchError(() => of<SendState>('error')),
       )
       .subscribe((s) => {
